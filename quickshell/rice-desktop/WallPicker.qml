@@ -7,7 +7,7 @@ import QtQuick.Effects
 // SUPER + W: your wallpapers on a Material 3 hero carousel. The one in focus is big in the middle, the ones next to
 // it get narrower the farther they are, so you see a lot of them without a wall of pictures. Wheel, arrows or a
 // click move the focus; Enter (or a click on the big one) sets it. Type to search; Tab goes through All, Pictures
-// and Live. Esc or a click outside closes it.
+// and Live. With more than one monitor, Ctrl + Tab (or the chips above) picks which one gets it. Esc or a click outside closes it.
 // Light on memory: only 15 cards are ever made (they show whatever is near the focus), the pictures are the small
 // previews of rice-walls, and only the big card loads the wallpaper itself (sharp). The cards are cut round by one
 // mask for all of them, not one graphics effect per card.
@@ -38,13 +38,27 @@ PanelWindow {
     WlrLayershell.namespace: "rice-walls"
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    Trigger { name: "walls-open"; fresh: true; onFired: function(l) { wp.open = !wp.open } }
+    // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+    Trigger { name: "walls-open"; fresh: true; onFired: function(l) { if (!wp.open) wp.screen = Mon.target(); wp.open = !wp.open } }
 
     // ---------- the wallpapers ----------
     property var all: []
     property string listText: ""
     property string current: ""
     property int dirs: 1
+    // more than one monitor: which one gets the picture ("" = all of them). The colors follow the main monitor
+    // (Mon.qml), so a picture for another one keeps them as they are
+    property string target: ""
+    property var walls: ({})                    // monitor -> its picture now (shell.qml reads awww)
+    property var picked: ({})                   // what was just set, until awww says so too
+    onWallsChanged: picked = ({})
+    readonly property bool mainTarget: target === "" || !Mon.main || target === Mon.main.name
+    readonly property string cur: target === "" ? current : (picked[target] || walls[target] || current)
+    function cycleTarget(d) {
+        const l = [""].concat(Mon.names)
+        target = l[(Math.max(0, l.indexOf(target)) + d + l.length) % l.length]
+    }
+    onTargetChanged: if (open) { centered = false; center(); centered = true }
     property bool loaded: false
     property string query: ""
     property string kind: "all"                       // all | pics | live
@@ -69,7 +83,7 @@ PanelWindow {
     }
     property bool centered: false
     function center() {
-        for (let i = 0; i < shown.length; i++) if (shown[i].path === current) { go(i, true); return }
+        for (let i = 0; i < shown.length; i++) if (shown[i].path === cur) { go(i, true); return }
         go(0, true)
     }
     onShownChanged: { if (centered) go(Math.min(sel, shown.length - 1), true) }
@@ -99,10 +113,11 @@ PanelWindow {
     readonly property bool missing: all.some(function(w) { return !w.thumb || w.thumb === w.path })
     Timer { interval: 3000; running: wp.open && wp.missing; repeat: true; onTriggered: if (!list.running) list.running = true }
     function apply(path) {
-        current = path
+        if (mainTarget) current = path
+        if (target !== "") { const n = Object.assign({}, picked); n[target] = path; picked = n }
         Sfx.play("click")
         pulse.restart()
-        Quickshell.execDetached(["bash", "-c", "\"$HOME/.local/bin/rice-dashboard\" wall \"$1\"", "_", path])
+        Quickshell.execDetached(["bash", "-c", "\"$HOME/.local/bin/rice-dashboard\" wall \"$1\" \"$2\" \"$3\"", "_", path, target, mainTarget ? "" : "keep-colors"])
     }
     function shuffle() { if (shown.length > 1) { let i = sel; while (i === sel) i = Math.floor(Math.random() * shown.length); go(i); apply(shown[i].path) } }
     Timer { id: focusT; interval: 60; onTriggered: search.forceActiveFocus() }
@@ -244,7 +259,7 @@ PanelWindow {
                 readonly property real d: idx - wp.pos
                 readonly property real it: wp.cin(d)
                 readonly property bool focus0: idx === wp.sel
-                readonly property bool cur: w !== null && w.path === wp.current
+                readonly property bool cur: w !== null && w.path === wp.cur
                 readonly property real rad: Math.min(width / 2, wp.lerp(Math.min(1, Math.abs(d)), 30, 22))
                 visible: w !== null && Math.abs(d) <= wp.reach + 0.5
                 width: wp.cw(d); height: wp.chh(d)
@@ -377,6 +392,7 @@ PanelWindow {
                         else if (k === Qt.Key_PageUp) wp.go(wp.sel - 5)
                         else if (k === Qt.Key_Home && search.text === "") wp.go(0)
                         else if (k === Qt.Key_End && search.text === "") wp.go(wp.shown.length - 1)
+                        else if ((k === Qt.Key_Tab || k === Qt.Key_Backtab) && (e.modifiers & Qt.ControlModifier)) { if (Mon.multi) wp.cycleTarget(k === Qt.Key_Tab ? 1 : -1) }
                         else if (k === Qt.Key_Tab) wp.kind = wp.kind === "all" ? "pics" : (wp.kind === "pics" ? "live" : "all")
                         else if (k === Qt.Key_Backtab) wp.kind = wp.kind === "all" ? "live" : (wp.kind === "live" ? "pics" : "all")
                         else return
@@ -418,6 +434,40 @@ PanelWindow {
         }
     }
 
+    // ---------- above the toolbar: which monitor gets it (only with more than one; Ctrl + Tab goes through them) ----------
+    Rectangle {
+        id: targets
+        visible: Mon.multi
+        width: tRow.implicitWidth + 12; height: 44; radius: 22
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: bar.y - height - 12
+        color: pal.surface
+        opacity: bar.opacity
+        MouseArea { anchors.fill: parent }
+        Row {
+            id: tRow
+            anchors.centerIn: parent
+            spacing: 4
+            Repeater {
+                model: [""].concat(Mon.names)
+                delegate: Rectangle {
+                    id: tc
+                    readonly property bool on: wp.target === modelData
+                    width: tcT.implicitWidth + 28; height: 34
+                    radius: on ? 17 : 10
+                    color: on ? pal.primary : (tcM.containsMouse ? pal.cardHi : pal.card)
+                    Behavior on radius { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 1.6 } }
+                    Behavior on color { ColorAnimation { duration: 180 } }
+                    Text { id: tcT; anchors.centerIn: parent; font.family: Fonts.main; font.pixelSize: 13; font.weight: Font.DemiBold
+                        text: modelData === "" ? Tr.t("All screens") : modelData + (Mon.main && Mon.main.name === modelData ? "  ·  " + Tr.t("main") : "")
+                        color: tc.on ? pal.inkPrimary : pal.fg }
+                    MouseArea { id: tcM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: { wp.target = modelData; search.forceActiveFocus() } }
+                }
+            }
+        }
+    }
+
     // ---------- under the carousel: where you are, and Set ----------
     Item {
         id: foot
@@ -431,12 +481,13 @@ PanelWindow {
             spacing: 2
             Text { text: (wp.sel + 1) + " / " + wp.shown.length + (wp.dirs > 1 ? "  ·  " + wp.dirs + Tr.t(" folders") : "")
                 color: "white"; font.family: Fonts.main; font.pixelSize: 14; font.weight: Font.DemiBold }
-            Text { text: Tr.t("Enter sets it  ·  Tab: All, Pictures, Live"); color: Qt.rgba(1, 1, 1, 0.6); font.family: Fonts.main; font.pixelSize: 11 }
+            Text { text: Tr.t("Enter sets it  ·  Tab: All, Pictures, Live") + (Mon.multi ? "  ·  " + Tr.t("Ctrl + Tab: screen") : "")
+                + (wp.mainTarget ? "" : "  ·  " + Tr.t("colors stay with ") + Mon.main.name); color: Qt.rgba(1, 1, 1, 0.6); font.family: Fonts.main; font.pixelSize: 11 }
         }
         // Set as wallpaper, or "In use" when it is the one you have (the button turns into a pill with a check)
         Rectangle {
             id: setB
-            readonly property bool inUse: wp.shown[wp.sel] !== undefined && wp.shown[wp.sel].path === wp.current
+            readonly property bool inUse: wp.shown[wp.sel] !== undefined && wp.shown[wp.sel].path === wp.cur
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
             width: setRow.implicitWidth + 40; height: 52
             radius: setM.pressed ? 14 : 26

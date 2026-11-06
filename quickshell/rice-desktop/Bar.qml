@@ -17,15 +17,20 @@ import QtQuick
 // What sits where comes from ~/.config/rice/bar.json (layout: left, center, right).
 PanelWindow {
     id: bar
-    // the main bar lives on the main screen; Bar on every screen (Mon.everywhere) makes a copy for each other screen.
-    // A copy shows the same, but commands from scripts (open the island, the calendar ...) go to the main bar only
-    property var scr: null
-    readonly property bool extra: scr !== null
-    screen: scr ? scr : Mon.screen
+    // one Bar per monitor (shell.qml binds `screen`); the main monitor's is the main bar. The others (extra) are
+    // shown with Bar on every screen (Mon.everywhere), each with its own monitor's workspaces. Commands from scripts
+    // (open the island, the calendar ...) go to the bar of the monitor you are on (takes(), Mon.target())
+    readonly property bool isMain: screen === Mon.main
+    readonly property bool extra: !isMain
+    readonly property bool here: Mon.everywhere || isMain
+    // the bar that answers for monitor `s` (the island's info card, from a keybind or the dashboard button)
+    function takes(s) { return Mon.everywhere ? s === screen : isMain }
     // one rice-services and one rice-weather for every bar (BarSvc.qml): a copy for another screen only reads them
     onOnChanged: if (!bar.extra) BarSvc.shown = bar.on || bar.ghostOnly
     onGhostOnlyChanged: if (!bar.extra) BarSvc.shown = bar.on || bar.ghostOnly
     Component.onCompleted: if (!bar.extra) BarSvc.shown = bar.on || bar.ghostOnly
+    // the main monitor changed (it was turned off, or Settings picked another): the new main bar speaks for all
+    onExtraChanged: if (!bar.extra) BarSvc.shown = bar.on || bar.ghostOnly
 
     // ---------- settings (~/.config/rice/bar.json) ----------
     property var bc: ({})
@@ -156,7 +161,7 @@ PanelWindow {
     }
 
     // ---------- the window ----------
-    visible: on || ghostOnly || barK > 0.01
+    visible: here && (on || ghostOnly || barK > 0.01)
     color: "transparent"
     anchors { top: !atBottom; bottom: atBottom; left: true; right: true }
     // room below for the recording island; windows only keep away from the bar itself
@@ -262,13 +267,15 @@ PanelWindow {
             return true
         })
     }
-    // workspaces: Hyprland or niri (Wm.qml)
-    readonly property int focusedId: Wm.focusedId
-    function occupied(id) { return Wm.occupied(id) }
-    function maxWs() { return Wm.maxWs(bar.nws) }
+    // workspaces: Hyprland or niri (Wm.qml), the ones of this bar's monitor
+    readonly property string out: screen ? screen.name : ""
+    readonly property int focusedId: Wm.activeIdOn(out)
+    function occupied(id) { return Wm.occupied(id, out) }
+    function maxWs() { return Wm.maxWs(bar.nws, out) }
     // ws-go: Hyprland (its Lua dispatchers) or niri (focus-workspace)
-    function goWs(id) { Wm.goWs(id) }
-    function run(cmd) { Quickshell.execDetached(["bash", "-c", cmd]) }
+    function goWs(id) { Wm.goWsOn(id, out) }
+    // a menu opened from here (Wi-Fi, volume, power, the launcher ...) opens on this monitor (Mon.target())
+    function run(cmd) { Mon.hint(bar.screen); Quickshell.execDetached(["bash", "-c", cmd]) }
 
     function pickPlayer() {
         const l = Mpris.players.values
@@ -699,7 +706,7 @@ PanelWindow {
     readonly property var st: Stats.st
     StatsHold { on: (bar.on || bar.ghostOnly) && (bar.hasMod("sysmon") || (barPop.open && barPop.kind === "system")) }
     // a side bar (VBar.qml) opens these cards too: "KIND" in ~/.cache/rice/barpop-open
-    Trigger { name: bar.extra ? "" : "barpop-open"; onFired: function(o) { const p = o.trim().split(" "); barPop.toggle(p[1] || "calendar", p[2] !== undefined ? parseFloat(p[2]) : 200) } }
+    Trigger { name: "barpop-open"; onFired: function(o) { if (!bar.takes(Mon.target())) return; const p = o.trim().split(" "); barPop.toggle(p[1] || "calendar", p[2] !== undefined ? parseFloat(p[2]) : 200) } }
     function popAt(it, k) { const p = it.mapToItem(body, it.width / 2, 0); barPop.fromW = it.width + 16; barPop.toggle(k, p.x) }
 
     Component { id: mWeather

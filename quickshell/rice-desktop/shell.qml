@@ -7,7 +7,9 @@ ShellRoot {
     id: root
     property var cfg: ({ widgets: {}, clock: {}, dock: {}, lock: {} })
     property string cfgText: ""
-    property string wallpaper: ""
+    property string wallpaper: ""          // the main monitor's (the widgets, the colors)
+    property var walls: ({})                // monitor name -> its wallpaper (awww query)
+    function wallOn(s) { return s && walls[s.name] ? walls[s.name] : wallpaper }
     property bool locked: false
     readonly property string home: Quickshell.env("HOME")
     // the screen the shell lives on (Settings > System > Screen > Main screen)
@@ -207,8 +209,21 @@ ShellRoot {
         onContent: function(t) { const w = t.trim(); if (w !== "" && w !== root.wallpaper) root.wallpaper = w } }
     Process {
         id: wpProc
-        command: ["bash", "-c", "w=$(awww query 2>/dev/null | grep -o 'image: .*' | head -1 | sed 's/^image: //'); [ -z \"$w\" ] && w=$(cat \"$HOME/.cache/hyprquickpaper-current\" 2>/dev/null); echo \"$w\""]
-        stdout: StdioCollector { onStreamFinished: root.wallpaper = text.trim() }
+        // one "<monitor>\t<picture>" line per monitor, then the last picked one (hyprquickpaper-current)
+        command: ["bash", "-c", "awww query 2>/dev/null | sed -n 's/^[^:]*: *\\([^:]*\\): .*image: \\(.*\\)$/\\1\\t\\2/p'; printf '@@\\t'; cat \"$HOME/.cache/hyprquickpaper-current\" 2>/dev/null"]
+        stdout: StdioCollector { onStreamFinished: {
+            const m = {}
+            let last = ""
+            for (const l of text.split("\n")) {
+                const i = l.indexOf("\t")
+                if (i < 0) continue
+                const k = l.substring(0, i).trim(), v = l.substring(i + 1).trim()
+                if (k === "@@") last = v; else if (v !== "") m[k] = v
+            }
+            if (JSON.stringify(m) !== JSON.stringify(root.walls)) root.walls = m
+            const w = root.scr && m[root.scr.name] ? m[root.scr.name] : last
+            if (w !== root.wallpaper) root.wallpaper = w
+        } }
     }
     Timer {
         interval: 30000
@@ -564,8 +579,11 @@ ShellRoot {
 
     // reads how bright the wallpaper is in each part of the screen, so every widget can pick dark or light text
     WallLum { path: root.wallpaper; sw: root.sw; sh: root.sh }
-    // niri: the blurred wallpaper behind the workspaces in the overview (SUPER + Tab)
-    NiriBackdrop { path: root.wallpaper }
+    // niri: the blurred wallpaper behind the workspaces in the overview (SUPER + Tab), each monitor its own
+    Variants {
+        model: Quickshell.screens
+        NiriBackdrop { required property var modelData; screen: modelData; path: root.wallOn(modelData) }
+    }
 
     EditorWindow { root: root }
 
@@ -575,33 +593,47 @@ ShellRoot {
     TaskView { }
     // the clipboard history (SUPER + V)
     LazyPanel { name: "clip-open"; ClipboardPanel { } }
-    LazyPanel { name: "walls-open"; WallPicker { } }
-    Bar { id: mainBar; nf: notifs }
-    // the bar on the left or right edge (Settings > DarkShadow bar > Position)
+    LazyPanel { name: "walls-open"; WallPicker { walls: root.walls } }
+    // the bar on the left or right edge (Settings > DarkShadow bar > Position): on the main monitor only
     VBar { }
-    // Settings > System > Monitors > Bar on every screen: the same bar on the other screens too
+    // a bar for every monitor, each with its own workspaces. The extra ones are only shown with Settings > System >
+    // Monitors > Bar on every screen (Mon.everywhere). The main monitor's one decides for the rest (the island takes
+    // the volume and the notifications or not: that is the same setting for all of them). Per monitor (Variants),
+    // not one unbound window: niri closes the surfaces of a monitor that is turned off, and a Variants instance is
+    // made again when it comes back
     Variants {
-        model: Mon.everywhere ? Mon.others : []
-        Bar { required property var modelData; scr: modelData; nf: notifs }
+        id: bars
+        model: Quickshell.screens
+        Scope {
+            id: perScreen
+            required property var modelData
+            readonly property alias bar: oneBar
+            Bar { id: oneBar; screen: perScreen.modelData; nf: notifs }
+            // a click on the desktop closes the bar's open card or tray menu (it lies under the windows, over the wallpaper)
+            PanelWindow {
+                screen: perScreen.modelData
+                visible: oneBar.sticky
+                color: "transparent"
+                anchors { top: true; bottom: true; left: true; right: true }
+                exclusionMode: ExclusionMode.Ignore
+                WlrLayershell.layer: WlrLayer.Bottom
+                WlrLayershell.namespace: "rice-island-catch"
+                MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onPressed: oneBar.closeCards() }
+            }
+        }
     }
-    // a click on the desktop closes the bar's open card or tray menu (it lies under the windows, over the wallpaper)
-    PanelWindow {
-        screen: Mon.screen
-        visible: mainBar.sticky
-        color: "transparent"
-        anchors { top: true; bottom: true; left: true; right: true }
-        exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.layer: WlrLayer.Bottom
-        WlrLayershell.namespace: "rice-island-catch"
-        MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onPressed: mainBar.closeCards() }
+    readonly property var mainBar: {
+        const l = bars.instances
+        for (let i = 0; i < l.length; i++) if (l[i].bar.isMain) return l[i].bar
+        return l.length > 0 ? l[0].bar : null
     }
     LazyPanel { name: "wifi-open"; WifiMenu { } }
     LazyPanel { name: "bluetooth-open"; BluetoothMenu { } }
     LazyPanel { name: "power-open"; PowerMenu { } }
     LazyPanel { name: "volume-open"; VolumeMenu { } }
-    VolumeOsd { islandTakes: mainBar.islandVolume }
+    VolumeOsd { islandTakes: !!root.mainBar && root.mainBar.islandVolume }
     LazyPanel { name: "gamebar-open"; GamePanel { gb: root.cfg.gamebar ? root.cfg.gamebar : ({}) } }
-    Notifs { id: notifs; islandTakes: mainBar.islandNotifs && notifs.shellMode }
+    Notifs { id: notifs; islandTakes: !!root.mainBar && root.mainBar.islandNotifs && notifs.shellMode }
     // made only when opened, let go two minutes after it closed (less memory from the start)
     LazyPanel { name: "cc-open"; ControlCenter { nf: notifs } }
 

@@ -113,7 +113,9 @@ PanelWindow {
     }
 
     // ---------- opening and closing ----------
-    function show(x, y) { cy = (y === undefined || isNaN(y)) ? -1 : y;
+    function show(x, y) { cy = (y === undefined || isNaN(y)) ? -1 : y
+        // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+        wm.screen = Mon.target()
         cx = x
         msg = ""
         barProc.running = true

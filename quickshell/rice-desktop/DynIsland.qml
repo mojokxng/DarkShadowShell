@@ -103,11 +103,13 @@ Item {
     }
     // rice-dashboard open / island: the info card (the dashboard is the island now)
     Trigger {
-        path: isl.bar && isl.bar.extra ? "" : Quickshell.env("HOME") + "/.cache/rice/island-open"
+        path: Quickshell.env("HOME") + "/.cache/rice/island-open"
         every: 1500
         onFired: function(line) {
             const p = String(line).trim().split(/\s+/)
             if (p.length < 2) return
+            // every monitor has a bar: only the one you are on (or clicked) opens it
+            if (isl.bar && !isl.bar.takes(Mon.target())) return
             isl.openInfo(p[1] === "system" || p[1] === "about" ? p[1] : "today", p[2] !== "open")
         }
     }
