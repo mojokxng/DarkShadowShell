@@ -102,6 +102,8 @@ PanelWindow {
 
     // ---------- opening and closing ----------
     function show(x) {
+        // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+        wm.screen = Mon.target()
         cx = x
         msg = ""
         barProc.running = true

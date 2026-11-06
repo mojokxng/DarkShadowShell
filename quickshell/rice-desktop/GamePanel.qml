@@ -136,7 +136,10 @@ PanelWindow {
         name: "gamebar-open"
         onFired: function(o) {
             const w = o.split(" ")[1] || "toggle"
-            gp.open = w === "open" ? true : (w === "close" ? false : !gp.open)
+            const o2 = w === "open" ? true : (w === "close" ? false : !gp.open)
+            // opens on the monitor you are on (Mon.qml)
+            if (o2 && !gp.open) gp.screen = Mon.target()
+            gp.open = o2
         }
     }
 

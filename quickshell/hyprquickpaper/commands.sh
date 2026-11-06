@@ -4,10 +4,13 @@
 # A video is a live wallpaper: rice-walls plays it (mpvpaper) and gives this script one frame of it.
 # What went wrong (no ImageMagick, matugen errors ...) is written to ~/.cache/rice/colors.log.
 
+# commands.sh PICTURE [MONITOR [keep-colors]]: every monitor, or only MONITOR (awww -o). keep-colors: a monitor
+# that is not the main one, so the colors and hyprquickpaper-current stay with the main monitor's wallpaper
 img="$1"
+out="${2:-}"
 [[ -f "$img" ]] || { echo "commands.sh: not a file: $img" >&2; exit 1; }
 case "${img,,}" in
-  *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v) exec "$HOME/.local/bin/rice-walls" set "$img" ;;
+  *.mp4|*.webm|*.mkv|*.mov|*.avi|*.m4v) exec "$HOME/.local/bin/rice-walls" set "$img" "$out" ${3:+"$3"} ;;
 esac
 
 mkdir -p "$HOME/.cache/rice" "$HOME/.config/waybar"
@@ -33,13 +36,14 @@ if [ -z "$RICE_COLORS_ONLY" ]; then
   [ -x "$HOME/.local/bin/rice-walls" ] && mapfile -t targs < <("$HOME/.local/bin/rice-walls" awww-args 2>/dev/null)
   [ "${#targs[@]}" -gt 0 ] || targs=(-t random --transition-duration 1)
   if command -v awww >/dev/null 2>&1; then
-    awww img "$img" "${targs[@]}" 2>>"$log" || awww img "$img" 2>>"$log" || say "awww could not set it (is awww-daemon running?)"
+    awww img "$img" "${targs[@]}" ${out:+-o "$out"} 2>>"$log" || awww img "$img" ${out:+-o "$out"} 2>>"$log" || say "awww could not set it (is awww-daemon running?)"
   elif command -v swww >/dev/null 2>&1; then
-    swww img "$img" "${targs[@]}" 2>>"$log" || swww img "$img" 2>>"$log"
+    swww img "$img" "${targs[@]}" ${out:+-o "$out"} 2>>"$log" || swww img "$img" ${out:+-o "$out"} 2>>"$log"
   else
     say "no awww: the wallpaper itself was not changed"
   fi
 fi
+[ "${3:-}" = "keep-colors" ] && exit 0
 
 src="$HOME/.cache/quickshell/thumbs/$(basename "$img")"
 [[ -f "$src" ]] || src="$img"

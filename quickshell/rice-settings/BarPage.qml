@@ -214,6 +214,13 @@ Item {
                 onChosen: function(x) { page.setv("position", x) }
             }
             SegRow {
+                label: I18n.t("Screens")
+                desc: I18n.t("A bar on every monitor, or only on the main one (Settings > Screen)")
+                options: [ { label: I18n.t("Every monitor"), value: "all" }, { label: I18n.t("Main only"), value: "main" } ]
+                current: page.v("screens", "all")
+                onChosen: function(x) { page.setv("screens", x) }
+            }
+            SegRow {
                 label: I18n.t("Size")
                 desc: I18n.t("How tall the bar is")
                 options: [ { label: I18n.t("Compact"), value: "32" }, { label: I18n.t("Normal"), value: "38" }, { label: I18n.t("Large"), value: "46" } ]

@@ -33,12 +33,25 @@ PanelWindow {
     WlrLayershell.namespace: "rice-walls"
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    Trigger { name: "walls-open"; onFired: function(l) { wp.open = !wp.open } }
+    // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+    Trigger { name: "walls-open"; onFired: function(l) { if (!wp.open) wp.screen = Mon.target(); wp.open = !wp.open } }
 
     // ---------- the wallpapers ----------
     property var all: []
     property string current: ""
     property int dirs: 1
+    // more than one monitor: which one gets the picture ("" = all of them). The colors follow the main monitor
+    // (Mon.qml), so a picture for another one keeps them as they are
+    property string target: ""
+    property var walls: ({})                    // monitor -> its picture now (shell.qml reads awww)
+    property var picked: ({})                   // what was just set, until awww says so too
+    onWallsChanged: picked = ({})
+    readonly property bool mainTarget: target === "" || !Mon.main || target === Mon.main.name
+    readonly property string cur: target === "" ? current : (picked[target] || walls[target] || current)
+    function cycleTarget(d) {
+        const l = [""].concat(Mon.names)
+        target = l[(Math.max(0, l.indexOf(target)) + d + l.length) % l.length]
+    }
     property string query: ""
     readonly property var shown: query === "" ? all : all.filter(function(w) { return w.name.toLowerCase().indexOf(wp.query.toLowerCase()) >= 0 })
     property int sel: 0
@@ -51,14 +64,15 @@ PanelWindow {
         command: ["bash", "-c", "\"$HOME/.local/bin/rice-dashboard\" walls"]
         stdout: StdioCollector { onStreamFinished: {
             try { const j = JSON.parse(text); wp.all = j.walls; wp.current = j.current; wp.dirs = (j.dirs || []).length } catch (e) { }
-            for (let i = 0; i < wp.shown.length; i++) if (wp.shown[i].path === wp.current) { wp.sel = i; grid.positionViewAtIndex(i, GridView.Center); break }
+            for (let i = 0; i < wp.shown.length; i++) if (wp.shown[i].path === wp.cur) { wp.sel = i; grid.positionViewAtIndex(i, GridView.Center); break }
         } }
     }
     // thumbnails are made in the background the first time: look again a bit later
     Timer { interval: 4000; running: wp.open; repeat: true; onTriggered: if (!list.running && wp.all.some(function(w) { return w.thumb === w.path || w.thumb === "" })) list.running = true }
     function apply(path) {
-        current = path
-        Quickshell.execDetached(["bash", "-c", "\"$HOME/.local/bin/rice-dashboard\" wall \"$1\"", "_", path])
+        if (mainTarget) current = path
+        if (target !== "") { const n = Object.assign({}, picked); n[target] = path; picked = n }
+        Quickshell.execDetached(["bash", "-c", "\"$HOME/.local/bin/rice-dashboard\" wall \"$1\" \"$2\" \"$3\"", "_", path, target, mainTarget ? "" : "keep-colors"])
     }
     function shuffle() { if (shown.length > 0) { sel = Math.floor(Math.random() * shown.length); grid.positionViewAtIndex(sel, GridView.Contain); apply(shown[sel].path) } }
     onShownChanged: if (sel >= shown.length) sel = Math.max(0, shown.length - 1)
@@ -96,7 +110,8 @@ PanelWindow {
             Column {
                 anchors.left: hIc.right; anchors.leftMargin: 14; anchors.verticalCenter: parent.verticalCenter
                 Text { text: Tr.t("Wallpapers"); color: pal.fg; font.family: Fonts.main; font.pixelSize: 20; font.weight: Font.DemiBold }
-                Text { text: wp.shown.length + (wp.shown.length === 1 ? Tr.t(" wallpaper") : Tr.t(" wallpapers")) + (wp.dirs > 1 ? "  ·  " + wp.dirs + Tr.t(" folders") : "") + Tr.t("  ·  colors follow"); color: pal.dim; font.family: Fonts.main; font.pixelSize: 12 }
+                Text { text: wp.shown.length + (wp.shown.length === 1 ? Tr.t(" wallpaper") : Tr.t(" wallpapers")) + (wp.dirs > 1 ? "  ·  " + wp.dirs + Tr.t(" folders") : "")
+                    + (wp.mainTarget ? Tr.t("  ·  colors follow") : "  ·  " + Tr.t("colors stay with ") + Mon.main.name); color: pal.dim; font.family: Fonts.main; font.pixelSize: 12 }
             }
             Row {
                 anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
@@ -116,6 +131,8 @@ PanelWindow {
                         Keys.onPressed: function(e) {
                             const cols = Math.max(1, Math.floor(grid.width / grid.cellWidth))
                             if (e.key === Qt.Key_Escape) { wp.open = false; e.accepted = true }
+                            else if (e.key === Qt.Key_Tab && Mon.multi) { wp.cycleTarget(1); e.accepted = true }
+                            else if (e.key === Qt.Key_Backtab && Mon.multi) { wp.cycleTarget(-1); e.accepted = true }
                             else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { if (wp.shown[wp.sel]) wp.apply(wp.shown[wp.sel].path); e.accepted = true }
                             else if (e.key === Qt.Key_Right) { wp.sel = Math.min(wp.shown.length - 1, wp.sel + 1); e.accepted = true }
                             else if (e.key === Qt.Key_Left) { wp.sel = Math.max(0, wp.sel - 1); e.accepted = true }
@@ -131,10 +148,34 @@ PanelWindow {
             }
         }
 
+        // which monitor (only with more than one): Tab / Shift+Tab in the search field go through them
+        Row {
+            id: targets
+            x: 24; y: 80
+            visible: Mon.multi
+            height: visible ? 34 : 0
+            spacing: 8
+            Repeater {
+                model: [""].concat(Mon.names)
+                delegate: Rectangle {
+                    readonly property bool on: wp.target === modelData
+                    width: chipT.implicitWidth + 32; height: 34; radius: on ? 12 : 17
+                    Behavior on radius { NumberAnimation { duration: 200 } }
+                    color: on ? pal.primary : (chipM.containsMouse ? pal.container : pal.card)
+                    Text { id: chipT; anchors.centerIn: parent; font.family: Fonts.main; font.pixelSize: 13
+                        font.weight: parent.on ? Font.DemiBold : Font.Normal
+                        text: modelData === "" ? "All screens" : modelData + (Mon.main && Mon.main.name === modelData ? "  ·  main" : "")
+                        color: parent.on ? pal.inkPrimary : (chipM.containsMouse ? pal.inkContainer : pal.fg) }
+                    MouseArea { id: chipM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: { wp.target = modelData; search.forceActiveFocus() } }
+                }
+            }
+        }
+
         // the grid
         GridView {
             id: grid
-            x: 24; y: 88; width: parent.width - 48; height: parent.height - 88 - 20
+            x: 24; y: 88 + (targets.visible ? 44 : 0); width: parent.width - 48; height: parent.height - y - 20
             clip: true
             readonly property int cols: Math.max(2, Math.floor(width / 230))
             cellWidth: Math.floor(width / cols); cellHeight: Math.round(cellWidth * 0.68)
@@ -166,7 +207,7 @@ PanelWindow {
             delegate: Item {
                 id: cell
                 width: grid.cellWidth; height: grid.cellHeight
-                readonly property bool cur: modelData.path === wp.current
+                readonly property bool cur: modelData.path === wp.cur
                 readonly property bool picked: index === wp.sel
                 // comes in one after another when the sheet opens, and again when what you type changes the list
                 readonly property real it: Math.min(wp.ease((wp.t - Math.min(index, 18) * 0.025) / 0.55),

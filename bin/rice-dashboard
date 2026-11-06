@@ -618,7 +618,8 @@ def main(a):
     elif cmd == "walls":
         walls()
     elif cmd == "wall" and len(a) > 2:
-        subprocess.Popen([BIN + "/rice-hotcorner", "wall", a[2]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        # wall PICTURE [MONITOR [keep-colors]]: see rice-hotcorner wall
+        subprocess.Popen([BIN + "/rice-hotcorner", "wall"] + a[2:5], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
     else:
         sys.exit(__doc__)

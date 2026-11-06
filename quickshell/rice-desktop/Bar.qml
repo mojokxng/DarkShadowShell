@@ -136,7 +136,12 @@ PanelWindow {
     }
 
     // ---------- the window ----------
-    visible: on
+    // one bar on every monitor (shell.qml), or only on the main one (Settings > DarkShadow bar > Screens)
+    readonly property bool isMain: screen === Mon.main
+    readonly property bool here: bc.screens !== "main" || isMain
+    // the bar that answers for monitor `s` (the island's info card, from a keybind or the dashboard button)
+    function takes(s) { return bc.screens === "main" ? isMain : s === screen }
+    visible: on && here
     color: "transparent"
     anchors { top: !atBottom; bottom: atBottom; left: true; right: true }
     // room below for the recording island; windows only keep away from the bar itself
@@ -238,13 +243,15 @@ PanelWindow {
             return true
         })
     }
-    // workspaces: Hyprland or niri (Wm.qml)
-    readonly property int focusedId: Wm.focusedId
-    function occupied(id) { return Wm.occupied(id) }
-    function maxWs() { return Wm.maxWs(bar.nws) }
+    // workspaces: Hyprland or niri (Wm.qml), the ones of this bar's monitor
+    readonly property string out: screen ? screen.name : ""
+    readonly property int focusedId: Wm.activeIdOn(out)
+    function occupied(id) { return Wm.occupied(id, out) }
+    function maxWs() { return Wm.maxWs(bar.nws, out) }
     // ws-go: Hyprland (its Lua dispatchers) or niri (focus-workspace)
-    function goWs(id) { Wm.goWs(id) }
-    function run(cmd) { Quickshell.execDetached(["bash", "-c", cmd]) }
+    function goWs(id) { Wm.goWsOn(id, out) }
+    // a menu opened from here (Wi-Fi, volume, power, the launcher ...) opens on this monitor (Mon.target())
+    function run(cmd) { Mon.hint(bar.screen); Quickshell.execDetached(["bash", "-c", cmd]) }
 
     function pickPlayer() {
         const l = Mpris.players.values

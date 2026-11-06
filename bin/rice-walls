@@ -3,7 +3,8 @@
 
   rice-walls list                 every wallpaper of your folders (JSON: dirs, current, walls)
   rice-walls state                folders, slideshow and live wallpaper settings (JSON, for Settings)
-  rice-walls set FILE             a picture or a video (live wallpaper) as your wallpaper, with its colors
+  rice-walls set FILE [MONITOR [keep-colors]]  a picture or a video (live wallpaper) as your wallpaper, with its colors;
+                                 MONITOR: a picture only there (keep-colors: not the main one, the colors stay)
   rice-walls folder add|remove DIR
   rice-walls waypaper on|off      Waypaper's folder in the list (on by default when Waypaper is set up)
   rice-walls waypaper-hook on|off Waypaper also changes the colors when you pick a wallpaper there
@@ -338,22 +339,25 @@ def start_live(v, c=None):
     return True
 
 
-def apply_picture(p, live=False):
-    """the picture as wallpaper, and the colors from it (hyprquickpaper's commands.sh)"""
+def apply_picture(p, live=False, out="", keep=False):
+    """the picture as wallpaper, and the colors from it (hyprquickpaper's commands.sh). out: only that monitor;
+    keep: a monitor that is not the main one, so the colors stay with the main monitor's wallpaper"""
     if os.path.isfile(APPLY):
         env = dict(os.environ, RICE_LIVE="1") if live else None
-        subprocess.run(["bash", APPLY, p], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
+        subprocess.run(["bash", APPLY, p] + ([out, "keep-colors" if keep else ""] if out else []), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
     else:
         for t in ("awww", "swww"):
             if shutil.which(t):
-                subprocess.run([t, "img", p] + awww_args(), stdout=subprocess.DEVNULL,
+                subprocess.run([t, "img", p] + awww_args() + (["-o", out] if out else []), stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL, timeout=20)
                 break
-        os.makedirs(os.path.dirname(CURRENT), exist_ok=True)
-        open(CURRENT, "w").write(p)
+        if not keep:
+            os.makedirs(os.path.dirname(CURRENT), exist_ok=True)
+            open(CURRENT, "w").write(p)
 
 
-def cmd_set(f):
+def cmd_set(f, out="", keep=False):
+    """f on every monitor, or only on monitor out (a picture; a live wallpaper always plays on all of them)"""
     f = os.path.abspath(os.path.expanduser(f))
     if not os.path.isfile(f):
         sys.exit("rice-walls: not a file: " + f)
@@ -375,7 +379,7 @@ def cmd_set(f):
         if os.path.exists(LIVE):
             os.remove(LIVE)
         stop_live()
-        apply_picture(f)
+        apply_picture(f, False, out, keep)
     open(LAST, "w").write(str(int(time.time())))
 
 
@@ -557,7 +561,7 @@ def main(a):
     elif cmd == "state":
         state()
     elif cmd == "set" and arg:
-        cmd_set(arg)
+        cmd_set(arg, a[3] if len(a) > 3 else "", len(a) > 4 and a[4] == "keep-colors")
     elif cmd == "colors" and arg:
         # Waypaper set this wallpaper itself: only the colors (and what the shell remembers)
         p = os.path.abspath(os.path.expanduser(arg))

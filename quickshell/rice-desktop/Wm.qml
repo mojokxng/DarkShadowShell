@@ -93,6 +93,7 @@ Singleton {
 
     // the monitor the user works on (niri: the one with the focused workspace)
     readonly property string focusedOutput: {
+        if (!niri) return Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
         tick
         const f = nWs.find(w => w.is_focused)
         return f ? (f.output || "") : ""
@@ -112,10 +113,23 @@ Singleton {
         }
         return Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
     }
-    // a workspace with windows on it
-    function occupied(n) {
+    // the same for one monitor (a bar on each monitor shows its own workspaces). niri: the active one there;
+    // Hyprland: the active workspace of that monitor
+    function activeIdOn(out) {
+        if (!out) return focusedId
         if (niri) {
-            const w = wsOn("").find(x => x.idx === n)
+            tick
+            const a = nWs.find(w => w.is_active && w.output === out)
+            return a ? a.idx : 1
+        }
+        const l = Hyprland.monitors.values
+        for (let i = 0; i < l.length; i++) if (l[i].name === out) return l[i].activeWorkspace ? l[i].activeWorkspace.id : 1
+        return focusedId
+    }
+    // a workspace with windows on it (niri: on monitor `out`, the focused one when it is empty)
+    function occupied(n, out) {
+        if (niri) {
+            const w = wsOn(out || "").find(x => x.idx === n)
             if (!w) return false
             for (const k in nWin) if (nWin[k].workspace_id === w.id) return true
             return false
@@ -125,12 +139,12 @@ Singleton {
         return false
     }
     // the highest workspace number in use (at least `min`)
-    function maxWs(min) {
+    function maxWs(min, out) {
         let m = min || 1
         if (niri) {
             // niri always keeps one empty workspace at the end: it is not counted
-            const l = wsOn("")
-            for (const w of l) if ((occupied(w.idx) || w.is_active) && w.idx > m) m = w.idx
+            const l = wsOn(out || "")
+            for (const w of l) if ((occupied(w.idx, out) || w.is_active) && w.idx > m) m = w.idx
             return Math.min(m, 20)
         }
         const l = Hyprland.workspaces.values
@@ -162,5 +176,11 @@ Singleton {
             lastGo = now
         }
         Quickshell.execDetached(["bash", "-c", "\"$HOME/.local/bin/ws-go\" \"$1\"", "_", s])
+    }
+    // the same on monitor `out` (a click on the bar of the other monitor): niri numbers workspaces per monitor and
+    // focus-workspace acts on the focused one, so that monitor is focused first. Hyprland's ids are global.
+    function goWsOn(n, out) {
+        if (!niri || !out || out === focusedOutput) { goWs(n); return }
+        Quickshell.execDetached(["bash", "-c", "niri msg action focus-monitor \"$2\" && \"$HOME/.local/bin/ws-go\" \"$1\"", "_", String(n), out])
     }
 }
