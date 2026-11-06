@@ -9,6 +9,7 @@ import QtQuick
 // Outside the editor the widget only takes clicks (calendar arrows, timer, notes...). The editor moves it.
 // The widget editor (EditorWindow.qml) changes px/py/sc/fw/fh/op/bgv/sty/flp live and saves on release.
 PanelWindow {
+    screen: Mon.main               // Mon.qml
     id: w
     property string wid: ""
     property var wc: ({})

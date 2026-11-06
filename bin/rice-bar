@@ -2,7 +2,7 @@
 """rice-bar: the DarkShadow bar, the Quickshell bar of this shell (Settings > DarkShadow bar and Bar layout).
 
   rice-bar state                  JSON for the settings app (options and layout)
-  rice-bar set KEY VALUE          style (flat|island|islands|pills|notch|dynamic), island_hover|island_volume|island_ws|island_notifs (on|off), autohide, shadow, position (top|bottom), height, opacity, tray_size (12-28),
+  rice-bar set KEY VALUE          style (flat|island|islands|pills|notch|dynamic), island_hover|island_volume|island_ws|island_notifs (on|off), autohide, shadow, position (top|bottom), screens (all|main), height, opacity, tray_size (12-28),
                                   workspaces, seconds, ws_style (dots|pacman|letters|numbers), logo (auto|apps|arch|gentoo|...)
   rice-bar layout-set JSON        {"left": [...], "center": [...], "right": [...]}
   rice-bar layout-add ZONE NAME [BEFORE]   put a module on the bar (ZONE left|center|right)
@@ -24,8 +24,10 @@ CFG = DIR + "/bar.json"
 DEFAULTS = {"enabled": True, "style": "dynamic", "position": "top", "height": 38, "workspaces": 5,
             "seconds": False, "opacity": 0.72, "ws_style": "dots", "logo": "auto", "autohide": False, "shadow": True,
             "island_hover": True, "island_volume": True, "island_ws": True, "island_notifs": True, "tray_size": 18,
-            "island_date": False, "island_weather": True, "island_charge": True, "island_tab": "today", "island_close": 4}
+            "island_date": False, "island_weather": True, "island_charge": True, "island_tab": "today", "island_close": 4,
+            "screens": "all"}
 CHOICES = {"style": ("flat", "island", "islands", "pills", "notch", "dynamic"), "position": ("top", "bottom"),
+           "screens": ("all", "main"),
            "ws_style": ("dots", "pacman", "letters", "numbers"), "island_tab": ("today", "system", "about"),
            "logo": ("auto", "apps", "tux", "arch", "gentoo", "fedora", "debian", "ubuntu", "nixos", "cachyos", "endeavouros",
                     "manjaro", "linuxmint", "opensuse", "void", "alpine", "pop", "kali", "centos", "raspbian",

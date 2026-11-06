@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Replace "random" with: fade, wipe, grow, outer, wave, center, any, random
 
+# commands.sh PICTURE [MONITOR [keep-colors]]: every monitor, or only MONITOR (awww -o). keep-colors: a monitor
+# that is not the main one, so the colors and hyprquickpaper-current stay with the main monitor's wallpaper
 img="$1"
+out="${2:-}"
 [[ -f "$img" ]] || { echo "commands.sh: not a file: $img" >&2; exit 1; }
 
-awww img "$img" -t random --transition-duration 1
+awww img "$img" -t random --transition-duration 1 ${out:+-o "$out"}
+[ "${3:-}" = "keep-colors" ] && exit 0
 
 src="$HOME/.cache/quickshell/thumbs/$(basename "$img")"
 [[ -f "$src" ]] || src="$img"

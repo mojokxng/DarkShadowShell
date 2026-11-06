@@ -6,6 +6,7 @@ import QtQuick
 // The dock's app menu (the apps button on the dock): every app, a search, and a pin on each one to keep your
 // favourites on the dock (Settings > Dock > Pinned apps does the same). It grows out of the dock.
 PanelWindow {
+    screen: Mon.main               // Mon.qml
     id: am
     property var dock: null
     property bool open: false

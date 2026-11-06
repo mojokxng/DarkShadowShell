@@ -22,7 +22,8 @@ PanelWindow {
     Behavior on t { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
     onShownChanged: t = shown ? 1 : 0
     property bool islandTakes: false    // the Dynamic bar's island shows it instead
-    function pop(isMic) { if (!ready || islandTakes) return; mic = isMic; shown = true; hideTimer.restart() }
+    // shows on the monitor you are on (Mon.qml)
+    function pop(isMic) { if (!ready || islandTakes) return; if (!shown) osd.screen = Mon.focused; mic = isMic; shown = true; hideTimer.restart() }
     Timer { id: hideTimer; interval: 1400; onTriggered: osd.shown = false }
     onVolChanged: pop(false)
     onMutedChanged: pop(false)

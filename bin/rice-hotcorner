@@ -647,16 +647,21 @@ def main(argv):
         if arg:
             bg([HOME + "/.local/bin/rice-colors", "mode", arg])
     elif cmd == "wall":
+        # wall PICTURE [MONITOR [keep-colors]]: on every monitor, or only on MONITOR. keep-colors (a monitor that
+        # is not the main one) leaves the colors and the "current" wallpaper alone: they follow the main monitor
+        out = argv[3] if len(argv) > 3 else ""
+        keep = len(argv) > 4 and argv[4] == "keep-colors"
         if arg and os.path.isfile(arg):
             if os.path.isfile(WALL_APPLY):
                 # wallpaper + colors (hyprquickpaper); some versions of its script restart Quickshell,
                 # so the desktop widgets are started again afterwards if they went away
-                bg(["bash", "-c", 'bash "$1" "$2"; sleep 1; pgrep -f "quickshell/rice-desktop" >/dev/null || setsid -f qs -n -p "$3" >/dev/null 2>&1',
-                    "_", WALL_APPLY, arg, HOME + "/.config/quickshell/rice-desktop"])
+                bg(["bash", "-c", 'bash "$1" "$2" "$4" "$5"; sleep 1; pgrep -f "quickshell/rice-desktop" >/dev/null || setsid -f qs -n -p "$3" >/dev/null 2>&1',
+                    "_", WALL_APPLY, arg, HOME + "/.config/quickshell/rice-desktop", out, "keep-colors" if keep else ""])
             else:
-                bg(["awww", "img", arg, "-t", "grow", "--transition-duration", "1"])
-                os.makedirs(os.path.dirname(WALL_CURRENT), exist_ok=True)
-                open(WALL_CURRENT, "w").write(arg)
+                bg(["awww", "img", arg, "-t", "grow", "--transition-duration", "1"] + (["-o", out] if out else []))
+                if not keep:
+                    os.makedirs(os.path.dirname(WALL_CURRENT), exist_ok=True)
+                    open(WALL_CURRENT, "w").write(arg)
     elif cmd == "walls":
         print(json.dumps(walls(60)[0]))
     elif cmd == "show":

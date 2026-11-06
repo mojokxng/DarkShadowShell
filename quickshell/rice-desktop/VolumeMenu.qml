@@ -46,7 +46,8 @@ PanelWindow {
         command: ["bash", "-c", "\"$HOME/.local/bin/rice-bar\" state 2>/dev/null"]
         stdout: StdioCollector { onStreamFinished: { try { vm.bc = JSON.parse(text) } catch (e) { } } }
     }
-    function show(x) { cx = x; barProc.running = true; open = true }
+    // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+    function show(x) { vm.screen = Mon.target(); cx = x; barProc.running = true; open = true }
     function hide() { open = false }
     Trigger {
         name: "volume-open"

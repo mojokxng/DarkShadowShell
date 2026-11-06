@@ -5,6 +5,7 @@ import QtQuick
 
 // Hot corner: touch the chosen screen corner and the panel slides out (Settings > Hot corners).
 PanelWindow {
+    screen: Mon.main               // Mon.qml
     id: hc
     property var cfg: ({ enabled: false })
     property var st: ({})

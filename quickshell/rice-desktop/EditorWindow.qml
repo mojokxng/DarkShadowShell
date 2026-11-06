@@ -5,6 +5,7 @@ import QtQuick
 // Widget editor: pick widgets from the bar at the bottom, drag them, pull a corner to resize,
 // change style and opacity under the selected one. Esc or Done to finish.
 PanelWindow {
+    screen: Mon.main               // Mon.qml
     id: ed
     property var root
     property string sel: ""

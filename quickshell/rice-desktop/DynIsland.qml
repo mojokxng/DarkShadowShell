@@ -104,6 +104,8 @@ Item {
         onFired: function(line) {
             const p = String(line).trim().split(/\s+/)
             if (p.length < 2) return
+            // every monitor has a bar: only the one you are on (or clicked) opens it
+            if (isl.bar && !isl.bar.takes(Mon.target())) return
             isl.openInfo(p[1] === "system" || p[1] === "about" ? p[1] : "today", p[2] !== "open")
         }
     }

@@ -6,6 +6,7 @@ import QtQuick
 // Audio bars that grow away from the Waybar edge (down from a top bar, up from a
 // bottom bar). Bottom layer, never takes input.
 PanelWindow {
+    screen: Mon.main               // Mon.qml
     id: vz
     property bool active: false
     property string barPos: "top"

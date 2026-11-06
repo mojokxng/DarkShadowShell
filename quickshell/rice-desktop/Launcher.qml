@@ -106,6 +106,8 @@ PanelWindow {
 
     // ---------- opening and closing ----------
     function show() {
+        // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+        ln.screen = Mon.target()
         query = ""
         rsProc.running = true
         usageProc.running = true

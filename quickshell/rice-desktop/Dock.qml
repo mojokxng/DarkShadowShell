@@ -76,6 +76,7 @@ Scope {
 
     // ---------------- the strip that brings the dock back ----------------
     PanelWindow {
+        screen: Mon.main               // Mon.qml
         id: strip
         visible: dock.on && dock.autoHide && !dock.reveal && dock.t < 0.05
         color: "transparent"
@@ -94,6 +95,7 @@ Scope {
 
     // ---------------- the dock ----------------
     PanelWindow {
+        screen: Mon.main               // Mon.qml
         id: dockWin
         visible: dock.on && (dock.reveal || dock.t > 0.01)
         color: "transparent"

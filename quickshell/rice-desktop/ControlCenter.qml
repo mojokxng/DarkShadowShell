@@ -112,7 +112,10 @@ PanelWindow {
         name: "cc-open"
         onFired: function(o) {
             const w = o.split(" ")[1] || "toggle"
-            cc.open = w === "open" ? true : (w === "close" ? false : !cc.open)
+            const o2 = w === "open" ? true : (w === "close" ? false : !cc.open)
+            // opens on the monitor you are on, or the one whose bar you clicked (Mon.qml)
+            if (o2 && !cc.open) cc.screen = Mon.target()
+            cc.open = o2
         }
     }
 

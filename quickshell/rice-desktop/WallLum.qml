@@ -6,6 +6,7 @@ import QtQuick
 // The widgets use it to choose dark text on a light wallpaper and light text on a dark one.
 // It lives in a 2 x 2 pixel surface at the very back, takes no input and does nothing between wallpaper changes.
 PanelWindow {
+    screen: Mon.main               // Mon.qml
     id: wl
     property string path: ""
     property real sw: 1920
