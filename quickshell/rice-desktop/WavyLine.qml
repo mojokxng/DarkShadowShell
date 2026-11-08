@@ -17,7 +17,10 @@ Item {
     implicitHeight: 18
     property real phase: 0
     readonly property real shown: drag.pressed ? drag.v : value
-    NumberAnimation on phase { from: 0; to: Math.PI * 2; duration: 1600; loops: Animation.Infinite; running: wl.visible && wl.moving && wl.wavy && !Look.lite }
+    // the wave travels in steps of about 30 a second (like SlowSpin): an animation repainted this Canvas, in
+    // JavaScript on the thread every other animation shares, on every frame of the screen (240 on a 240 Hz one)
+    Timer { interval: 33; repeat: true; running: wl.visible && wl.moving && wl.wavy && !Look.lite
+        onTriggered: wl.phase = (wl.phase + Math.PI * 2 * interval / 1600) % (Math.PI * 2) }
     onPhaseChanged: cv.requestPaint()
     onShownChanged: cv.requestPaint()
     onThickChanged: cv.requestPaint()

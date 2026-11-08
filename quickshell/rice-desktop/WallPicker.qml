@@ -12,10 +12,13 @@ PanelWindow {
     id: wp
     property bool open: false
     property real t: 0
-    Behavior on t { NumberAnimation { duration: wp.open ? 520 : 200; easing.type: Easing.Linear } }
+    Behavior on t { NumberAnimation { duration: wp.open ? 520 : 160; easing.type: Easing.Linear } }
     function ease(p) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, p)), 4) }
-    readonly property real et: ease(t)
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (open && t > 0.999))) outCurve = false
     onOpenChanged: {
+        if (!open && t > 0.98) outCurve = true
         t = open ? 1 : 0
         if (open) { query = ""; search.text = ""; list.running = true; focusT.restart() }
     }
@@ -210,7 +213,7 @@ PanelWindow {
                 readonly property bool cur: modelData.path === wp.cur
                 readonly property bool picked: index === wp.sel
                 // comes in one after another when the sheet opens, and again when what you type changes the list
-                readonly property real it: Math.min(wp.ease((wp.t - Math.min(index, 18) * 0.025) / 0.55),
+                readonly property real it: wp.outCurve ? wp.et : Math.min(wp.ease((wp.t - Math.min(index, 18) * 0.025) / 0.55),
                                                     wp.ease((wp.ft - Math.min(index, 14) * 0.03) / 0.5))
                 // while scrolling, the ones at the top and bottom edge are a little smaller and fainter
                 readonly property real edge: {

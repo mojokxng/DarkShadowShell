@@ -18,10 +18,12 @@ Item {
 
     property real t: 0
     NumberAnimation { id: tA; target: ep; property: "t"; easing.type: Easing.Linear }
-    onShownChanged: { tA.stop(); tA.from = t; tA.to = shown ? 1 : 0; tA.duration = Math.max(1, Math.round((shown ? 680 : 240) * Math.abs(tA.to - t))); tA.start() }
+    onShownChanged: { if (!shown && t > 0.98) outCurve = true; tA.stop(); tA.from = t; tA.to = shown ? 1 : 0; tA.duration = Math.max(1, Math.round((shown ? 680 : 180) * Math.abs(tA.to - t))); tA.start() }
     function ease(p) { return 1 - Math.pow(1 - p, 4) }
-    readonly property real et: ease(t)
-    function stg(i) { return ease(Math.max(0, Math.min(1, (t - i * 0.06) / 0.7))) }
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (shown && t > 0.999))) outCurve = false
+    function stg(i) { return outCurve ? et : ease(Math.max(0, Math.min(1, (t - i * 0.06) / 0.7))) }
     opacity: Math.min(1, et * 1.5)
     transform: Translate { x: (1 - ep.et) * -60 }
 

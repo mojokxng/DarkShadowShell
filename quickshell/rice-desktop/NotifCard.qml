@@ -26,10 +26,12 @@ Item {
     // in and out: t runs evenly, the card eases on its own
     property real t: 0
     function ease(p) { return 1 - Math.pow(1 - p, 4) }
-    readonly property real et: ease(t)
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (!out && t > 0.999))) outCurve = false
     Component.onCompleted: { t = 1; if (waits) lifeAnim.restart() }
-    onOutChanged: if (out) t = 0
-    Behavior on t { NumberAnimation { duration: nc.out ? 240 : 640; easing.type: Easing.Linear } }
+    onOutChanged: if (out) { if (t > 0.98) outCurve = true; t = 0 }
+    Behavior on t { NumberAnimation { duration: nc.out ? 200 : 640; easing.type: Easing.Linear } }
     opacity: nc.popup ? Math.min(1, et * 1.4) : 1
     scale: nc.popup ? 0.92 + 0.08 * et : 1
     transformOrigin: fromRight ? Item.Right : Item.Left

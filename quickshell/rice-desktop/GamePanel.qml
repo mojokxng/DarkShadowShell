@@ -15,11 +15,13 @@ PanelWindow {
     property real t: 0
     // t runs evenly in time; the panel and each part ease on their own (quick start, long soft landing, like
     // Material 3's emphasized-decelerate), one after another from the top. Closing is a short accelerating fade.
-    Behavior on t { NumberAnimation { duration: gp.open ? 760 : 260; easing.type: Easing.Linear } }
+    Behavior on t { NumberAnimation { duration: gp.open ? 760 : 180; easing.type: Easing.Linear } }
     function ease(p) { return 1 - Math.pow(1 - p, 4) }
-    readonly property real et: ease(t)
-    function stg(i) { return ease(Math.max(0, Math.min(1, (gp.t - 0.08 - i * 0.04) / 0.6))) }   // i up to 8
-    onOpenChanged: { t = open ? 1 : 0; if (open) refresh() }
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (open && t > 0.999))) outCurve = false
+    function stg(i) { return outCurve ? et : ease(Math.max(0, Math.min(1, (gp.t - 0.08 - i * 0.04) / 0.6))) }   // i up to 8
+    onOpenChanged: { if (!open && t > 0.98) outCurve = true; t = open ? 1 : 0; if (open) refresh() }
 
     // ---------- colors: dark tonal surfaces with the theme color ----------
     readonly property real hue: Look.accent.hslHue < 0 ? 0.55 : Look.accent.hslHue

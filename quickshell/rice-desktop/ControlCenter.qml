@@ -16,17 +16,20 @@ PanelWindow {
     property string tab: "control"
     property real t: 0
     // t runs evenly in time; every part eases on its own (quick start, long soft landing, like Material 3's
-    // emphasized-decelerate), so the panel opens in one smooth wave and closes with a quick, accelerating fade
-    Behavior on t { NumberAnimation { duration: cc.open ? 720 : 260; easing.type: Easing.Linear } }
+    // emphasized-decelerate), so the panel opens in one smooth wave; it closes as one piece that leaves at once
+    // (Look.panelEase)
+    Behavior on t { NumberAnimation { duration: cc.open ? 720 : 180; easing.type: Easing.Linear } }
     function ease(p) { return 1 - Math.pow(1 - p, 4) }
-    readonly property real et: ease(t)
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (open && t > 0.999))) outCurve = false
     // each part of the panel comes in a little after the one above it (i = its place, from the top)
-    function stg(i) { return ease(Math.max(0, Math.min(1, (cc.t - i * 0.035) / 0.615))) }   // i up to 11
+    function stg(i) { return outCurve ? et : ease(Math.max(0, Math.min(1, (cc.t - i * 0.035) / 0.615))) }   // i up to 11
     // Control <-> Overview: Material 3 shared axis (the old one slides out and fades, the new one comes in)
     property real tabT: 0
     onTabChanged: { fl.contentY = 0; tabAnim.to = tab === "overview" ? 1 : 0; tabAnim.restart() }
     NumberAnimation { id: tabAnim; target: cc; property: "tabT"; duration: 520; easing.type: Easing.BezierSpline; easing.bezierCurve: Look.emph }
-    onOpenChanged: { t = open ? 1 : 0; if (open) refresh() }
+    onOpenChanged: { if (!open && t > 0.98) outCurve = true; t = open ? 1 : 0; if (open) refresh() }
 
     // ---------- colors: Settings > Notifications > Theme and Transparency ----------
     NPal { id: pal; theme: cc.nf ? cc.nf.theme : "shell"; alpha: cc.nf ? Math.min(1, cc.nf.ccAlpha + 0.08) : 0.9 }
