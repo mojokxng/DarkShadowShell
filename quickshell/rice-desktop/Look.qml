@@ -36,6 +36,14 @@ Singleton {
     readonly property var decel: [0.05, 0.7, 0.1, 1, 1, 1]
     readonly property var accel: [0.3, 0, 0.8, 0.15, 1, 1]
     readonly property var emph: [0.2, 0, 0, 1, 1, 1]
+    // how far a panel is shown, from its even-running t (0 .. 1). In: a quick start and a long soft landing.
+    // Out (a close that starts fully open): t^3, so it starts to leave the moment you close it. The in curve
+    // played backwards hardly moved for the first half of the close (still 94 % there), which read as a slow
+    // close. A panel clears `out` once t is back at 0 or 1, so a reversed animation never jumps between curves.
+    function panelEase(t, out) {
+        const p = Math.max(0, Math.min(1, t))
+        return out ? p * p * p : 1 - Math.pow(1 - p, 4)
+    }
     // the accent color of your theme (Waybar colors), used by the Google style and the visualizer
     property color accent: "#9ec9bd"
 

@@ -17,11 +17,13 @@ Item {
     height: Math.min(parent ? parent.height - 40 : 800, col.implicitHeight + 28)
 
     property real t: 0
-    Behavior on t { NumberAnimation { duration: ep.shown ? 680 : 220; easing.type: Easing.Linear } }
-    onShownChanged: t = shown ? 1 : 0
+    Behavior on t { NumberAnimation { duration: ep.shown ? 680 : 180; easing.type: Easing.Linear } }
+    onShownChanged: { if (!shown && t > 0.98) outCurve = true; t = shown ? 1 : 0 }
     function ease(p) { return 1 - Math.pow(1 - p, 4) }
-    readonly property real et: ease(t)
-    function stg(i) { return ease(Math.max(0, Math.min(1, (t - i * 0.06) / 0.7))) }
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (shown && t > 0.999))) outCurve = false
+    function stg(i) { return outCurve ? et : ease(Math.max(0, Math.min(1, (t - i * 0.06) / 0.7))) }
     opacity: Math.min(1, et * 1.5)
     transform: Translate { x: (1 - ep.et) * -60 }
 

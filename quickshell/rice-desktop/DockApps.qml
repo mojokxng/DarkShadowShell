@@ -11,10 +11,12 @@ PanelWindow {
     property var dock: null
     property bool open: false
     property real t: 0
-    Behavior on t { NumberAnimation { duration: am.open ? 560 : 200; easing.type: Easing.Linear } }
-    readonly property real et: 1 - Math.pow(1 - t, 4)
-    onOpenChanged: { t = open ? 1 : 0; if (open) { search.text = ""; search.forceActiveFocus() } }
-    function stg(i) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, (t - 0.1 - Math.min(i, 20) * 0.02) / 0.5)), 4) }
+    Behavior on t { NumberAnimation { duration: am.open ? 560 : 160; easing.type: Easing.Linear } }
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (open && t > 0.999))) outCurve = false
+    onOpenChanged: { if (!open && t > 0.98) outCurve = true; t = open ? 1 : 0; if (open) { search.text = ""; search.forceActiveFocus() } }
+    function stg(i) { return outCurve ? et : 1 - Math.pow(1 - Math.max(0, Math.min(1, (t - 0.1 - Math.min(i, 20) * 0.02) / 0.5)), 4) }
 
     readonly property string edge: dock ? dock.edge : "bottom"
     readonly property var pinnedIds: dock && dock.dc.apps ? dock.dc.apps : []

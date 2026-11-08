@@ -7,6 +7,7 @@ import Quickshell.Services.UPower
 import Quickshell.Services.SystemTray
 import Quickshell.Widgets
 import QtQuick
+import QtQuick.Shapes
 
 // The DarkShadow bar: the bar of this shell, made in Quickshell (Settings > DarkShadow bar and Bar layout).
 // Styles: flat, island (one pill), islands (a pill for each side), pills (a pill for each module), notch (the middle
@@ -408,11 +409,13 @@ PanelWindow {
                 x: tx
                 Behavior on x { XAnimator { duration: 380; easing.type: Easing.InOutCubic } }
                 onTxChanged: { facingLeft = tx < x; chomp.restart() }
-                Canvas {
+                // a Shape, not a Canvas: the scene graph draws the wedge on the GPU, with no JS paint and no
+                // threaded-Canvas sync on every frame of the chomp
+                Shape {
                     id: pac
                     anchors.fill: parent
                     property real mouth: 0.2
-                    renderStrategy: Canvas.Threaded
+                    preferredRendererType: Shape.CurveRenderer
                     SequentialAnimation {
                         id: chomp
                         SequentialAnimation {
@@ -423,17 +426,19 @@ PanelWindow {
                         NumberAnimation { target: pac; property: "mouth"; to: 0.2; duration: 80 }
                     }
                     transform: Scale { origin.x: 9; xScale: pacBox.facingLeft ? -1 : 1 }
-                    onMouthChanged: requestPaint()
-                    onVisibleChanged: if (visible) requestPaint()
-                    onPaint: {
-                        const c = getContext("2d")
-                        c.reset()
-                        c.fillStyle = "#F6F5F4"
-                        c.beginPath()
-                        c.moveTo(width / 2, height / 2)
-                        c.arc(width / 2, height / 2, width / 2, mouth * Math.PI, (2 - mouth) * Math.PI)
-                        c.closePath()
-                        c.fill()
+                    ShapePath {
+                        fillColor: "#F6F5F4"
+                        strokeColor: "transparent"
+                        strokeWidth: 0
+                        startX: pac.width / 2; startY: pac.height / 2
+                        PathAngleArc {
+                            centerX: pac.width / 2; centerY: pac.height / 2
+                            radiusX: pac.width / 2; radiusY: pac.height / 2
+                            startAngle: pac.mouth * 180
+                            sweepAngle: 360 * (1 - pac.mouth)
+                            moveToStart: false
+                        }
+                        PathLine { x: pac.width / 2; y: pac.height / 2 }
                     }
                 }
             }

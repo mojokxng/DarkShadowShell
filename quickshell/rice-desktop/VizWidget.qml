@@ -85,6 +85,9 @@ Item {
     Canvas {
         id: cv
         anchors.fill: parent
+        // painted on its own thread: 30 paints a second while music plays stay off the thread the bar's and
+        // the menus' animations run on
+        renderStrategy: Canvas.Threaded
         onVisibleChanged: requestPaint()
         onPaint: {
             const c = getContext("2d")

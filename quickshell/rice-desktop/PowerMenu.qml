@@ -11,9 +11,11 @@ PanelWindow {
     property real t: 0
     // t runs evenly; the menu eases on its own: it grows out of the bar (quick start, soft landing) and
     // folds back up quickly when it closes
-    Behavior on t { NumberAnimation { duration: pw.open ? 520 : 200; easing.type: Easing.Linear } }
-    readonly property real et: 1 - Math.pow(1 - t, 4)
-    onOpenChanged: t = open ? 1 : 0
+    Behavior on t { NumberAnimation { duration: pw.open ? 520 : 160; easing.type: Easing.Linear } }
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (open && t > 0.999))) outCurve = false
+    onOpenChanged: { if (!open && t > 0.98) outCurve = true; t = open ? 1 : 0 }
 
     readonly property color fg: "#F6F5F4"
     readonly property color dim: Qt.rgba(0.965, 0.961, 0.957, 0.6)
