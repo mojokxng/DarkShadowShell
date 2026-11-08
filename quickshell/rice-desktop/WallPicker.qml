@@ -17,11 +17,14 @@ PanelWindow {
     id: wp
     property bool open: false
     property real t: 0
-    Behavior on t { NumberAnimation { duration: wp.open ? (Look.lite ? 320 : 620) : 220; easing.type: Easing.Linear } }
+    Behavior on t { NumberAnimation { duration: wp.open ? (Look.lite ? 320 : 620) : 160; easing.type: Easing.Linear } }
     function ease(p) { return 1 - Math.pow(1 - Math.max(0, Math.min(1, p)), 4) }
     function clamp01(p) { return Math.max(0, Math.min(1, p)) }
-    readonly property real et: ease(t)
+    readonly property real et: Look.panelEase(t, outCurve)
+    property bool outCurve: false            // Look.panelEase: a close that started fully open
+    onTChanged: if (outCurve && (t < 0.001 || (open && t > 0.999))) outCurve = false
     onOpenChanged: {
+        if (!open && t > 0.98) outCurve = true
         t = open ? 1 : 0
         if (open) { query = ""; search.text = ""; kind = "all"; centered = false; list.running = true; focusT.restart() }
     }
@@ -157,7 +160,8 @@ PanelWindow {
     function cw(d) { const ad = Math.abs(d), a = Math.floor(ad), f = ad - a; return lerp(f, anchorW(a), anchorW(a + 1)) }
     function chh(d) { return carH * (1 - 0.1 * Math.min(1, Math.abs(d)) - 0.025 * Math.max(0, Math.min(3, Math.abs(d) - 1))) }
     // opening: the hero rises first, the others follow outwards; a new list: the same, quicker
-    function cin(d) { const k = Math.min(Math.abs(d), 6); return Math.min(wp.ease((wp.t - k * 0.06) / 0.6), wp.ease((wp.ft - k * 0.05) / 0.55)) }
+    // while closing (outCurve) the cards leave as one piece with the panel, no stagger
+    function cin(d) { if (outCurve) return et; const k = Math.min(Math.abs(d), 6); return Math.min(wp.ease((wp.t - k * 0.06) / 0.6), wp.ease((wp.ft - k * 0.05) / 0.55)) }
     readonly property int base: Math.round(pos)
     readonly property var slots: { const l = []; for (let k = -reach; k <= reach; k++) l.push(k); return l }
 

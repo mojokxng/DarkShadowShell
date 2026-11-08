@@ -12,7 +12,10 @@ Item {
     property color track: Qt.rgba(1, 1, 1, 0.12)
     property real waves: 14
     property real phase: 0
-    NumberAnimation on phase { from: 0; to: Math.PI * 2; duration: 2200; loops: Animation.Infinite; running: wa.visible && wa.moving && wa.wavy && !Look.lite }
+    // the wave travels in steps of about 30 a second (like SlowSpin): an animation repainted this Canvas, in
+    // JavaScript on the thread every other animation shares, on every frame of the screen (240 on a 240 Hz one)
+    Timer { interval: 33; repeat: true; running: wa.visible && wa.moving && wa.wavy && !Look.lite
+        onTriggered: wa.phase = (wa.phase + Math.PI * 2 * interval / 2200) % (Math.PI * 2) }
     onPhaseChanged: cv.requestPaint()
     onValueChanged: cv.requestPaint()
     onThickChanged: cv.requestPaint()
