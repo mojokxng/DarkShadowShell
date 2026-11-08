@@ -447,8 +447,11 @@ Item {
             easing.type: isl.big ? Easing.OutBack : Easing.InOutCubic; easing.overshoot: Look.lite ? 0 : 0.9 } }
         property real cwA: isl.cw
         property real chA: isl.ch
-        Behavior on cwA { SpringAnimation { spring: 2.4; damping: 0.36; epsilon: 0.4 } }
-        Behavior on chA { SpringAnimation { spring: 2.4; damping: 0.36; epsilon: 0.4 } }
+        // time-based, not SpringAnimation: Qt steps springs in fixed 16 ms chunks ("capped at 62fps"), so on a
+        // 240 Hz screen the card's size moved only every ~4th frame and crept on for ~0.8 s. Same feel (no
+        // overshoot, a soft landing), at the screen's own rate and done in 420 ms
+        Behavior on cwA { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+        Behavior on chA { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
         readonly property real tc: Math.max(0, t)
         width: Math.max(isl.bh, isl.width + (cwA - isl.width) * tc)
         height: Math.max(isl.bh * 0.6, isl.bh + (chA - isl.bh) * tc)
@@ -490,8 +493,9 @@ Item {
                     readonly property var cur: isl.infoTab === "system" ? tSys : (isl.infoTab === "about" ? tAbout : tToday)
                     x: 4 + cur.x; y: 4; width: cur.width; height: parent.height - 8; radius: height / 2
                     color: fInfo.pp ? fInfo.pp.primary : "white"
-                    Behavior on x { SpringAnimation { spring: 4; damping: 0.4; epsilon: 0.3 } }
-                    Behavior on width { SpringAnimation { spring: 4; damping: 0.4; epsilon: 0.3 } }
+                    // time-based, not SpringAnimation (that one is stepped at ~60 Hz, see cwA above)
+                    Behavior on x { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+                    Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
                 }
                 Row {
                     id: tabRow
