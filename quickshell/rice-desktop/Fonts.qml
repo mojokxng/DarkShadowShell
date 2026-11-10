@@ -44,24 +44,15 @@ Singleton {
         }
     }
 
-    Process {
-        id: proc
-        command: ["bash", "-c", "cat \"$HOME/.config/rice/fonts.json\" 2>/dev/null"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let j = {}
-                try { j = JSON.parse(text) } catch (e) { j = {} }
-                f.v = j.v || (text.trim() === "" ? 2 : 1)
-                f.rMain = j.main || ""; f.rNumbers = j.numbers || ""; f.rTitle = j.title || ""
-                f.rReading = j.reading || ""; f.rMono = j.mono || ""; f.rIcons = j.icons || ""
-            }
+    // read in the shell when the file changes (Trigger.qml), not by starting bash every 1.5 s
+    Trigger {
+        path: Quickshell.env("HOME") + "/.config/rice/fonts.json"; every: 5000
+        onContent: function(text) {
+            let j = {}
+            try { j = JSON.parse(text) } catch (e) { j = {} }
+            f.v = j.v || (text.trim() === "" ? 2 : 1)
+            f.rMain = j.main || ""; f.rNumbers = j.numbers || ""; f.rTitle = j.title || ""
+            f.rReading = j.reading || ""; f.rMono = j.mono || ""; f.rIcons = j.icons || ""
         }
-    }
-    Timer {
-        interval: 1500
-        running: true
-        repeat: true
-        onTriggered: { if (!proc.running) proc.running = true }
     }
 }

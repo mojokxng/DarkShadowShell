@@ -151,7 +151,19 @@ def main():
         say()
 
 
+def die_with_parent():
+    """End together with the shell that started us. A line is only written when the answer changes, so a dead
+    pipe could go unnoticed for hours, and every restart of the shell left one of us behind (Linux only)."""
+    try:
+        import ctypes
+        import signal
+        ctypes.CDLL(None).prctl(1, int(signal.SIGTERM))    # PR_SET_PDEATHSIG
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
+    die_with_parent()
     try:
         main()
     except (KeyboardInterrupt, BrokenPipeError):
