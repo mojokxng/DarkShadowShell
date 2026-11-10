@@ -364,7 +364,7 @@ PanelWindow {
                         onClicked: { cc.bin(["rice-hotcorner", "record", cc.recording ? "stop" : "full"]); if (cc.recording) cc.recording = false; else cc.open = false } }
                     Tile { width: parent.tw
                         readonly property string p: cc.sv.profile || ""
-                        visible: cc.sv.have && cc.sv.have.powerprofilesctl === true
+                        visible: !!(cc.sv.have && cc.sv.have.powerprofilesctl === true)
                         icon: p === "performance" ? "bolt" : (p === "power-saver" ? "eco" : "balance"); glyph: ""
                         label: p === "performance" ? "High" : (p === "power-saver" ? "Low" : "Medium"); on: p === "performance"
                         onClicked: {

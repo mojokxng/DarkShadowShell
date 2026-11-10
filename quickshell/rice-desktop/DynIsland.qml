@@ -269,7 +269,7 @@ Item {
                 spacing: 9
                 ShapeImage { visible: pl.playing; width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter
                     kind: Look.shape; source: pl.art; empty: isl.pal ? isl.pal.container : "#333"; fallbackColor: isl.pal ? isl.pal.inkContainer : "#ccc"
-                    SlowSpin { turn: 360; period: 9000; running: pl.playing && !Look.lite } }
+                    SlowSpin { turn: 360; period: 9000; running: pl.playing && isl.pillMode === "idle" && !Look.lite } }
                 Text { anchors.verticalCenter: parent.verticalCenter; text: isl.bar ? isl.bar.timeText : ""
                     color: isl.pal ? isl.pal.fg : "white"; font.family: Fonts.main; font.pixelSize: 14; font.weight: Font.DemiBold }
                 // Settings > Dynamic island: the date and the weather beside the time
@@ -284,7 +284,7 @@ Item {
                     Text { anchors.verticalCenter: parent.verticalCenter; text: isl.wTemp.replace(/[CF]$/, ""); color: isl.pal ? isl.pal.dim : "#aaa"
                         font.family: Fonts.main; font.pixelSize: 13; font.weight: Font.Medium }
                 }
-                Eq { visible: pl.playing; anchors.verticalCenter: parent.verticalCenter; h: 14; go: isl.pillMode === "idle" }
+                Eq { visible: pl.playing; anchors.verticalCenter: parent.verticalCenter; h: 14; go: pl.playing && isl.pillMode === "idle" }
             }
         }
 
@@ -765,7 +765,7 @@ Item {
                     Blob { anchors.fill: parent; kind: pl.playing ? Look.shape : "circle"; color: isl.pal ? isl.pal.primary : "white"
                         scale: pm.pressed ? 0.86 : (pm.containsMouse ? 1.06 : 1)
                         Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
-                        SlowSpin { turn: 360; period: 12000; running: pl.playing && !Look.lite } }
+                        SlowSpin { turn: 360; period: 12000; running: pl.playing && isl.big && isl.cardMode === "media" && !Look.lite } }
                     MIcon { anchors.centerIn: parent; size: 20; filled: true; name: pl.playing ? "pause" : "play_arrow"; glyph: ""
                         color: isl.pal ? isl.pal.inkPrimary : "black" }
                     MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pl.toggle() }
