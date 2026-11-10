@@ -348,6 +348,7 @@ FocusScope {
                 readonly property string style: lv.v("input", "pill")
                 readonly property bool wrong: !!root && root.phase === "wrong"
                 readonly property bool checking: !!root && root.phase === "checking"
+                readonly property bool touch: checking && !!root && root.touch      // the security key is blinking
                 // a little shake when the password is wrong
                 property real shake: 0
                 transform: Translate { x: passArea.shake; y: (1 - lv.stg(4)) * 24 }
@@ -376,7 +377,8 @@ FocusScope {
                         Blob { anchors.fill: parent; kind: Look.shape; color: passArea.wrong ? "#ff8a80" : pal.primary
                             Behavior on color { ColorAnimation { duration: 200 } }
                             RotationAnimator on rotation { from: 0; to: 360; duration: 1600; loops: Animation.Infinite; running: passArea.checking } }
-                        MIcon { anchors.centerIn: parent; size: 18; name: root && root.phase === "done" ? "lock_open" : "lock"; glyph: ""; color: pal.inkPrimary } }
+                        MIcon { anchors.centerIn: parent; size: 18; name: root && root.phase === "done" ? "lock_open" : (passArea.touch ? "key" : "lock")
+                            glyph: passArea.touch ? String.fromCodePoint(0xF0306) : ""; color: pal.inkPrimary } }
                     // what you typed: full shapes in your accent that grow in slowly, turning a little as they
                     // settle (the Material 3 emphasized curve); while it checks they ripple like Google's loader
                     property real ripple: 0
@@ -430,7 +432,7 @@ FocusScope {
                 WavyLine {
                     y: 56 + 10; anchors.horizontalCenter: parent.horizontalCenter
                     width: parent.width - 40; height: 14
-                    visible: passArea.checking
+                    visible: passArea.checking && !passArea.touch
                     handle: false; moving: true; thick: 3
                     SequentialAnimation on value { running: passArea.checking; loops: Animation.Infinite
                         NumberAnimation { from: 0.15; to: 0.85; duration: 700; easing.type: Easing.InOutSine }
@@ -444,6 +446,17 @@ FocusScope {
                     elide: Text.ElideRight
                     visible: !!root && root.msg !== "" && !passArea.checking
                     text: root ? root.msg : ""; color: "#ff8a80"; font.family: Fonts.main; font.pixelSize: 13
+                }
+                // the password was right and the key is blinking: say so (in place of the wave)
+                Text {
+                    y: 56 + 10
+                    width: parent.width
+                    horizontalAlignment: lv.atLeft ? Text.AlignLeft : Text.AlignHCenter
+                    visible: passArea.touch
+                    text: "Touch your security key"; color: pal.primary; font.family: Fonts.main; font.pixelSize: 13; font.weight: Font.Medium
+                    SequentialAnimation on opacity { running: passArea.touch; loops: Animation.Infinite
+                        NumberAnimation { to: 0.45; duration: 700; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 1; duration: 700; easing.type: Easing.InOutSine } }
                 }
             }
 
