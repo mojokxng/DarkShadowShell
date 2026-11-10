@@ -48,6 +48,8 @@ ShellRoot {
     property string pending: ""
     property string phase: "idle"            // idle | checking | wrong | done
     property string msg: ""
+    // a security key (pam_u2f) asked to be touched and is waiting for it
+    property bool touch: false
     property int tries: 0
     // rice-lock test: a real lock that unlocks itself after 30 seconds (to try the keyboard without risk)
     readonly property bool testMode: Quickshell.env("RICE_LOCK_TEST") === "1"
@@ -71,7 +73,7 @@ ShellRoot {
     function submit() {
         if (phase === "checking" || phase === "done" || pass === "" || waitT.running) return
         pending = pass
-        phase = "checking"; msg = ""
+        phase = "checking"; msg = ""; touch = false
         if (pam.active && pam.responseRequired) { pam.respond(pending); pending = ""; return }
         if (pam.active) return                 // it asks for the password in a moment (onResponseRequiredChanged)
         console.log("[lock] checking the password with PAM:", pam.config)
@@ -98,13 +100,21 @@ ShellRoot {
         onPamMessage: {
             console.log("[lock] PAM says:", message, messageIsError ? "(error)" : "")
             if (messageIsError) lockShell.msg = message
+            // pam_u2f's cue ("Please touch the device."): the key is blinking now
+            // checkT starts over: the touch gets its own 20 s, not what the password check left of them
+            else if (/touch|tap|presence|security key|device/i.test(message)) { lockShell.touch = true; checkT.restart() }
         }
         onError: function(e) { console.warn("[lock] PAM error", e); lockShell.msg = Tr.t("Could not check the password") }
         onCompleted: function(result) {
             console.log("[lock] PAM finished:", result === PamResult.Success ? "right password" : "result " + result)
             if (lockShell.phase !== "checking") return      // the attempt was given up (checkT): its result is old
+            const touched = lockShell.touch
+            lockShell.touch = false
             if (result === PamResult.Success) { lockShell.phase = "done"; lockShell.pending = ""; lockShell.unlock(); return }
-            lockShell.fail(lockShell.msg !== "" ? lockShell.msg : (result === PamResult.MaxTries ? Tr.t("Too many tries, wait a moment") : Tr.t("That is not the password")))
+            // a stack that checks the password first (on NixOS: unix requisite, then u2f) only asks for the
+            // touch after a right password, so a failure after the cue means the key was not touched
+            lockShell.fail(lockShell.msg !== "" ? lockShell.msg : (result === PamResult.MaxTries ? Tr.t("Too many tries, wait a moment")
+                : (touched ? Tr.t("The security key was not touched, try again") : Tr.t("That is not the password"))))
         }
     }
     property int wait: 0                     // seconds left before the next try
@@ -116,8 +126,9 @@ ShellRoot {
             onTriggered: {
                 console.warn("[lock] PAM did not answer; the attempt was dropped")
                 if (pam.active) pam.abort()
-                lockShell.phase = "idle"; lockShell.pending = ""; lockShell.pass = ""
-                lockShell.msg = Tr.t("Could not check the password (PAM did not answer)")
+                const touched = lockShell.touch
+                lockShell.phase = "idle"; lockShell.pending = ""; lockShell.pass = ""; lockShell.touch = false
+                lockShell.msg = touched ? Tr.t("The security key was not touched, try again") : Tr.t("Could not check the password (PAM did not answer)")
             } }
     Timer { id: wrongT; interval: 2600; onTriggered: if (lockShell.phase === "wrong") { lockShell.phase = "idle"; lockShell.msg = lockShell.wait > 0 ? Tr.t("Wait") + " " + lockShell.wait + " s" : "" } }
 

@@ -195,6 +195,8 @@ Item {
             readonly property bool wrong: !!lc.root && lc.root.phase === "wrong"
             readonly property bool checking: !!lc.root && lc.root.phase === "checking"
             readonly property bool done: !!lc.root && lc.root.phase === "done"
+            // the password was right and the security key (pam_u2f) is blinking: say so in place of the shapes
+            readonly property bool touch: checking && !!lc.root && lc.root.touch === true
             height: 52; radius: 26
             width: Math.round(400 * Math.min(1, lc.k)) + (done ? 60 : 0)
             Behavior on width { NumberAnimation { duration: 420; easing.type: Easing.OutBack } }
@@ -222,13 +224,15 @@ Item {
                 Blob { anchors.fill: parent; kind: Look.shape; color: pass.wrong ? "#ff8a80" : lc.acc
                     Behavior on color { ColorAnimation { duration: 200 } }
                     RotationAnimator on rotation { from: 0; to: 360; duration: 1400; loops: Animation.Infinite; running: pass.checking } }
-                MIcon { anchors.centerIn: parent; size: 18; name: pass.done ? "lock_open" : "lock"; glyph: ""; color: lc.ink
+                MIcon { anchors.centerIn: parent; size: 18; name: pass.done ? "lock_open" : (pass.touch ? "key" : "lock")
+                    glyph: pass.touch ? String.fromCodePoint(0xF0306) : ""; color: lc.ink
                     scale: pass.done ? 1.25 : 1; Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } } } }
             property real ripple: 0
             NumberAnimation on ripple { from: 0; to: 1; duration: 1000; loops: Animation.Infinite; running: pass.checking }
             Row {
                 anchors.left: lk.right; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
+                visible: !pass.touch
                 Repeater {
                     model: lc.root ? Math.max(0, Math.min(lc.root.pass.length, Math.floor((pass.width - 110) / 20))) : 0
                     delegate: Item {
@@ -263,10 +267,19 @@ Item {
             }
             Text {
                 anchors.left: lk.right; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter
-                visible: !!lc.root && lc.root.pass === ""
+                visible: !!lc.root && lc.root.pass === "" && !pass.touch
                 text: pass.wrong && lc.root && lc.root.msg !== "" ? lc.root.msg : (pass.checking ? Tr.t("Checking ...") : (lv && lv.isPreview ? Tr.t("Password (preview, Esc closes)") : Tr.t("Enter your password")))
                 color: pass.wrong ? "#ffb4ab" : lc.dim; font.family: Fonts.main; font.pixelSize: 14
                 width: pass.width - 110; elide: Text.ElideRight
+            }
+            Text {
+                anchors.left: lk.right; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter
+                visible: pass.touch
+                text: Tr.t("Touch your security key"); color: lc.acc; font.family: Fonts.main; font.pixelSize: 14; font.weight: Font.Medium
+                width: pass.width - 70; elide: Text.ElideRight
+                SequentialAnimation on opacity { running: pass.touch; loops: Animation.Infinite
+                    NumberAnimation { to: 0.45; duration: 700; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 1; duration: 700; easing.type: Easing.InOutSine } }
             }
             Item {
                 anchors.right: parent.right; anchors.rightMargin: 7; anchors.verticalCenter: parent.verticalCenter
