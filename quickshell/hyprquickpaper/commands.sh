@@ -36,7 +36,16 @@ if [ -z "$RICE_COLORS_ONLY" ]; then
   [ -x "$HOME/.local/bin/rice-walls" ] && mapfile -t targs < <("$HOME/.local/bin/rice-walls" awww-args 2>/dev/null)
   [ "${#targs[@]}" -gt 0 ] || targs=(-t random --transition-duration 1)
   if command -v awww >/dev/null 2>&1; then
-    awww img "$img" "${targs[@]}" ${out:+-o "$out"} 2>>"$log" || awww img "$img" ${out:+-o "$out"} 2>>"$log" || say "awww could not set it (is awww-daemon running?)"
+    # one transition per monitor, side by side: a single `awww img` steps every monitor's animation together, and a
+    # compositor sends a monitor whose desktop is covered by a window (niri: ~1 frame a second) few frames, so the
+    # visible monitor's animation crawled at that rate too
+    outs=("$out")
+    [ -z "$out" ] && mapfile -t outs < <(awww query 2>/dev/null | sed -n 's/^[^:]*: *\([^:]*\): .*/\1/p')
+    [ "${#outs[@]}" -gt 0 ] || outs=("")
+    for o in "${outs[@]}"; do
+      { awww img "$img" "${targs[@]}" ${o:+-o "$o"} 2>>"$log" || awww img "$img" ${o:+-o "$o"} 2>>"$log" || say "awww could not set it (is awww-daemon running?)"; } &
+    done
+    wait
   elif command -v swww >/dev/null 2>&1; then
     swww img "$img" "${targs[@]}" ${out:+-o "$out"} 2>>"$log" || swww img "$img" ${out:+-o "$out"} 2>>"$log"
   else
