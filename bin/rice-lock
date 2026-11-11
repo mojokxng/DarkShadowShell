@@ -381,7 +381,7 @@ SHOT = HOME + "/.cache/rice/lock-shot.png"
 FALLBACK = HOME + "/.cache/rice/lock-fallback"
 # the parts it shares with the desktop shell (copied from rice-desktop when they are newer)
 SHARED = ["Look", "Fonts", "DashFont", "MIcon", "T", "Blob", "ShapeImage", "WavyLine", "WavyArc", "Player",
-          "RoundImage", "NPal", "Trigger", "Shadow"]
+          "RoundImage", "NPal", "Trigger", "Shadow", "Tr"]
 
 
 def sync_shared():
