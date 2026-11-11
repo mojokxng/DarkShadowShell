@@ -737,44 +737,6 @@ def cmd_monitor_revert():
     os.remove(PREV)
 
 
-def cmd_monitor_arrange(order):
-    """monitor-arrange A,B,...: the monitors side by side, left to right, tops lined up. Kept in hypr.json
-    (niri: rice-niri writes the positions into config.kdl, which niri reloads)"""
-    names = [n for n in order.split(",") if n]
-    cur = {m["name"]: m for m in monitors_json()}
-    if not names or any(n not in cur for n in names):
-        die("no such monitor")
-    s = load()
-    x = 0
-    for n in names:
-        m = cur[n]
-        pos = "%dx0" % x
-        e = s["monitors"].get(n) or {}
-        e.setdefault("mode", mode_str(m))
-        e.setdefault("scale", m.get("scale", 1))
-        e["position"] = pos
-        s["monitors"][n] = e
-        if not NIRI:
-            mon_eval(n, e["mode"], pos, e["scale"])
-        x += int(round(m["width"] / (float(m.get("scale", 1)) or 1)))
-    save(s)
-
-
-def cmd_monitor_main(name):
-    """monitor-main NAME|auto: the monitor the shell's widgets, dock and notifications live on (Mon.qml)"""
-    os.makedirs(DIR, exist_ok=True)
-    f = DIR + "/screens.json"
-    try:
-        c = json.load(open(f))
-    except Exception:
-        c = {}
-    if name == "auto":
-        c.pop("main", None)
-    else:
-        c["main"] = name
-    json.dump(c, open(f, "w"), indent=2)
-
-
 def cmd_reload():
     if NIRI:
         niri_apply()
@@ -985,7 +947,7 @@ def main(a):
     if len(a) < 2:
         die("usage: hypr-set state|set|border-mode|border-color|anim-enabled|anim-speed|anim-style|binds|bind-add|bind-del|"
             "autostart|autostart-add|autostart-del|autostart-toggle|monitors|monitor-apply|monitor-keep|"
-            "monitor-revert|monitor-layout|monitor-set|monitor-arrange|monitor-main|reload|reset-all|kbd-state|kbd-set|kbd-options|kbd-next")
+            "monitor-revert|monitor-layout|monitor-set|reload|reset-all|kbd-state|kbd-set|kbd-options|kbd-next")
     c, r = a[1], a[2:]
     table = {
         "state": (0, cmd_state), "set": (2, cmd_set), "border-mode": (1, cmd_border_mode),
@@ -996,7 +958,6 @@ def main(a):
         "monitors": (0, cmd_monitors), "monitor-apply": (4, cmd_monitor_apply),
         "monitor-keep": (0, cmd_monitor_keep), "monitor-revert": (0, cmd_monitor_revert),
         "monitor-layout": (1, cmd_monitor_layout), "monitor-set": (3, cmd_monitor_set),
-        "monitor-arrange": (1, cmd_monitor_arrange), "monitor-main": (1, cmd_monitor_main),
         "reload": (0, cmd_reload), "reset-all": (0, cmd_reset_all),
         "kbd-state": (0, cmd_kbd_state), "kbd-set": (1, cmd_kbd_set), "kbd-options": (1, cmd_kbd_options),
         "kbd-next": (0, cmd_kbd_next), "shadow-intensity": (1, cmd_shadow_intensity),
