@@ -225,6 +225,9 @@ Item {
         }
         T { visible: !!page.st.error && !page.running; text: I18n.t("Could not reach GitHub: %1", page.st.error || ""); font.pixelSize: 12; color: M3.inkDim
             leftPadding: 6; width: parent.width; wrapMode: Text.WordWrap }
+        // a package manager owns the shell (NixOS: rice-update is a stub that says "managed" and never updates)
+        T { visible: !!page.st.managed; text: page.st.managed || ""; font.pixelSize: 12; color: M3.inkDim
+            leftPadding: 6; width: parent.width; wrapMode: Text.WordWrap }
 
         // ---------- what the update is doing, live ----------
         SectionTitle {
