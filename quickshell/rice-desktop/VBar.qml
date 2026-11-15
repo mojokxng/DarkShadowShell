@@ -122,7 +122,8 @@ PanelWindow {
     }
 
     // ---------- the window ----------
-    visible: on || t > 0.01
+    visible: rvW.alive && (on || t > 0.01)
+    Revive { id: rvW; win: vb }     // back after niri closed it (its monitor went off)
     color: "transparent"
     anchors { top: true; bottom: true; left: !atRight; right: atRight }
     implicitWidth: barW + gap * 2
