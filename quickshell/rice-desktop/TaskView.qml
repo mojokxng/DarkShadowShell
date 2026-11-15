@@ -27,6 +27,8 @@ PanelWindow {
     property real t: 0
     NumberAnimation { id: tAnim; target: tv; property: "t"; easing.type: Easing.BezierSpline }
     function show(m) {
+        // on the monitor you are on: rice-taskview data lists that monitor's workspaces (niri) (Mon.qml)
+        if (!open) tv.screen = Mon.target()
         mode = m; query = ""; open = true
         tAnim.stop(); tAnim.to = 1; tAnim.duration = 380; tAnim.easing.bezierCurve = Look.decel; tAnim.start()
         load()
