@@ -81,7 +81,9 @@ Scope {
     PanelWindow {
         screen: Mon.screen
         id: strip
-        visible: dock.on && dock.autoHide && !dock.reveal && dock.t < 0.05
+        // rvS: back after niri closed it (its monitor went off), see Revive.qml
+        visible: rvS.alive && dock.on && dock.autoHide && !dock.reveal && dock.t < 0.05
+        Revive { id: rvS; win: strip }
         color: "transparent"
         anchors { bottom: dock.edge === "bottom"; left: dock.edge === "left"; right: dock.edge === "right" }
         implicitWidth: dock.vert ? 3 : Math.max(200, panel.width)
@@ -100,7 +102,8 @@ Scope {
     PanelWindow {
         screen: Mon.screen
         id: dockWin
-        visible: dock.on && (dock.reveal || dock.t > 0.01)
+        visible: rvD.alive && dock.on && (dock.reveal || dock.t > 0.01)
+        Revive { id: rvD; win: dockWin }
         color: "transparent"
         anchors { bottom: dock.edge === "bottom"; left: dock.edge === "left"; right: dock.edge === "right" }
         implicitWidth: panel.width + (dock.vert ? 18 : 24)

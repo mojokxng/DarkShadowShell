@@ -84,7 +84,8 @@ PanelWindow {
         later.restart()
     }
 
-    visible: cfg.enabled === true
+    visible: rvW.alive && (cfg.enabled === true)
+    Revive { id: rvW; win: hc }     // back after niri closed it (its monitor went off)
     // niri: blur behind it (Hyprland blurs this layer with its own rule)
     NiriBlur { win: hc; items: [shape]; radius: shape.radius; on: hc.open && hc.t > 0.98 }
     color: "transparent"

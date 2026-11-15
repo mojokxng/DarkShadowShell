@@ -14,6 +14,7 @@ Scope {
     property bool open: false
     property real px: 0                       // where it was opened (in the screen)
     property real py: 0
+    property var scr: null                    // the monitor it opens on: the one right-clicked (or the main one)
     // Material 3 motion, like the control center: t runs evenly in time and every part eases on its own.
     // In: the card unfolds out of the pointer on emphasized-decelerate (a long, soft landing) with a slight
     // spring in size, its corners settle, then the rows come in one after another from below.
@@ -46,9 +47,10 @@ Scope {
 
     NPal { id: pal; theme: "shell"; alpha: 0.8 }
 
-    function show(x, y) {
+    function show(x, y, s) {
         if (editing) return
         px = x; py = y
+        scr = s || Mon.screen
         if (shown && open) return
         shown = true
         goT.restart()
@@ -99,27 +101,35 @@ Scope {
         name: "deskmenu-open"
         onFired: function(l) {
             if (dm.shown) { dm.close(); return }
-            const s = Mon.screen
-            dm.show(s ? s.width / 2 - 170 : 600, s ? s.height / 2 - 260 : 300)
+            const s = Mon.target()
+            dm.show(s ? s.width / 2 - 170 : 600, s ? s.height / 2 - 260 : 300, s)
         }
     }
 
     // ---------- the right-click catcher: the whole desktop, under every window, over the wallpaper ----------
-    PanelWindow {
-        screen: Mon.screen
-        color: "transparent"
-        anchors { top: true; bottom: true; left: true; right: true }
-        exclusionMode: ExclusionMode.Ignore
-        // Bottom: under the windows and under the desktop widgets (made after it), over the wallpaper
-        WlrLayershell.layer: WlrLayer.Bottom
-        WlrLayershell.namespace: "rice-desktop-click"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.RightButton | Qt.LeftButton
-            onPressed: function(m) {
-                if (m.button === Qt.RightButton) dm.show(m.x, m.y)
-                else if (dm.shown) dm.close()
+    // One per monitor (fork): the menu opens on the desktop you right-clicked. It used to be a single window on the
+    // main monitor, so right-clicking the other desktop did nothing, and once swayidle turned DP-1 off (niri closes
+    // that output's surfaces) it was gone for good until a relog. A Variants makes each one anew with its monitor.
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            id: catcher
+            required property var modelData
+            screen: modelData
+            color: "transparent"
+            anchors { top: true; bottom: true; left: true; right: true }
+            exclusionMode: ExclusionMode.Ignore
+            // Bottom: under the windows and under the desktop widgets (made after it), over the wallpaper
+            WlrLayershell.layer: WlrLayer.Bottom
+            WlrLayershell.namespace: "rice-desktop-click"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton | Qt.LeftButton
+                onPressed: function(m) {
+                    if (m.button === Qt.RightButton) dm.show(m.x, m.y, catcher.modelData)
+                    else if (dm.shown) dm.close()
+                }
             }
         }
     }
@@ -201,7 +211,7 @@ Scope {
     // ---------- the menu ----------
     PanelWindow {
         id: win
-        screen: Mon.screen
+        screen: dm.scr || Mon.screen
         visible: dm.shown
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
@@ -211,6 +221,10 @@ Scope {
         WlrLayershell.keyboardFocus: dm.shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         // niri: frosted glass behind the card once it has settled (gaming mode and Light mode: none, Look.flat)
         NiriBlur { win: win; items: [card]; radius: card.radius; on: dm.open && dm.t > 0.98 }
+
+        // niri closed it under us (its monitor went off while it was open): start over, or the next right-click
+        // would find it "already open" and do nothing
+        onClosed: { goT.stop(); tAnim.stop(); dm.open = false; dm.t = 0; dm.shown = false }
 
         // a click anywhere else closes it
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onPressed: dm.close() }

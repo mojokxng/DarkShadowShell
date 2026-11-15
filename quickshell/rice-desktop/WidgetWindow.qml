@@ -92,7 +92,8 @@ PanelWindow {
         }
     }
 
-    visible: active && fk > 0.01
+    visible: rvW.alive && (active && fk > 0.01)
+    Revive { id: rvW; win: w }     // back after niri closed it (its monitor went off)
     color: "transparent"
     readonly property bool full: editing
     readonly property int pad: 56                  // room around the widget for its shadow and the way in

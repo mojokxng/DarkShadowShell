@@ -13,7 +13,8 @@ PanelWindow {
     property real sh: 1080
     property real ratio: 16 / 9      // width / height of the wallpaper picture
 
-    visible: Look.adapt && path !== ""
+    visible: rvW.alive && (Look.adapt && path !== "")
+    Revive { id: rvW; win: wl }     // back after niri closed it (its monitor went off)
     implicitWidth: 2
     implicitHeight: 2
     color: "transparent"

@@ -51,7 +51,8 @@ PanelWindow {
     function menuX() { return atRight ? (vb.screen ? vb.screen.width - 260 : 1660) : 260 }
 
     // ---------- the window ----------
-    visible: on
+    visible: rvW.alive && (on)
+    Revive { id: rvW; win: vb }     // back after niri closed it (its monitor went off)
     color: "transparent"
     anchors { top: true; bottom: true; left: !atRight; right: atRight }
     implicitWidth: barW + gap * 2
